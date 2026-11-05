@@ -143,8 +143,9 @@ class LyricsPartyCard extends HTMLElement {
     this._root.innerHTML = `
 <style>
   :host{display:block;height:100%;}
-  /* --vh, --vw and --vmax are 1% of the card itself, set by a ResizeObserver */
-  .wrap{--vh:1vh;--vw:1vw;--vmax:1vmax;--fs:1;position:relative;overflow:hidden;height:100vh;min-height:280px;color:#fff;
+  /* --vh is 1% of the card's shorter side, so tall phones don't get giant text.
+     --vw and --vmax are 1% of the card itself. A ResizeObserver sets all three. */
+  .wrap{--vh:1vmin;--vw:1vw;--vmax:1vmax;--fs:1;position:relative;overflow:hidden;display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:280px;color:#fff;
     font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#111;}
   .wrap.card{border-radius:var(--ha-card-border-radius,12px);}
   .bg{position:absolute;inset:0;transition:background 1.5s ease;}
@@ -160,12 +161,13 @@ class LyricsPartyCard extends HTMLElement {
   @keyframes bounce{0%{transform:scaleY(.08)}100%{transform:scaleY(1)}}
   .paused .bars i,.paused .glow{animation-play-state:paused;}
   .lite .glow{animation:none}.off .bars,.off .glow{display:none}
-  .head{position:absolute;top:calc(var(--vh)*3);left:calc(var(--vw)*3);right:calc(var(--vw)*3);display:flex;align-items:center;gap:calc(var(--vw)*2);z-index:2;}
+  .head{position:relative;flex:none;margin:calc(var(--vh)*3) calc(var(--vw)*3) calc(var(--vh)*4);display:flex;align-items:center;gap:calc(var(--vh)*3);z-index:2;}
+  .info{flex:1;min-width:0;}
   .art{width:calc(var(--vh)*13);height:calc(var(--vh)*13);border-radius:12px;background:#333 center/cover;box-shadow:0 6px 24px rgba(0,0,0,.5);flex:none;}
-  .title{font-size:calc(var(--vh)*4.2);font-weight:700;line-height:1.15;}
-  .artist{font-size:calc(var(--vh)*3);opacity:.8;margin-top:calc(var(--vh)*.4);}
-  .room{margin-left:auto;font-size:calc(var(--vh)*2.2);opacity:.6;text-align:right;}
-  .lyr{position:absolute;left:calc(var(--vw)*5);right:calc(var(--vw)*5);top:calc(var(--vh)*20);bottom:calc(var(--vh)*12);overflow:hidden;z-index:2;
+  .title{font-size:calc(var(--vh)*4.2);font-weight:700;line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
+  .artist{font-size:calc(var(--vh)*3);opacity:.8;margin-top:calc(var(--vh)*.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .room{flex:none;max-width:30%;font-size:calc(var(--vh)*2.2);font-size:max(calc(var(--vh)*2.2),11px);opacity:.6;text-align:right;}
+  .lyr{position:relative;flex:1;min-height:0;margin:0 calc(var(--vw)*5) calc(var(--vh)*12);overflow:hidden;z-index:2;
     -webkit-mask-image:linear-gradient(transparent 0,#000 18%,#000 72%,transparent 100%);
     mask-image:linear-gradient(transparent 0,#000 18%,#000 72%,transparent 100%);}
   .track{transition:transform .6s cubic-bezier(.2,.7,.2,1);will-change:transform;}
@@ -175,12 +177,12 @@ class LyricsPartyCard extends HTMLElement {
   .ln.next{opacity:.6;}
   .plain .ln{opacity:.85;font-size:calc(var(--vh)*3.6*var(--fs));}
   .msg{position:absolute;left:0;right:0;top:45%;text-align:center;font-size:calc(var(--vh)*3.4);opacity:.75;z-index:2;}
-  .src{position:absolute;right:calc(var(--vw)*2);bottom:calc(var(--vh)*1.2);font-size:calc(var(--vh)*1.5);opacity:.4;z-index:2;}
+  .src{position:absolute;right:calc(var(--vw)*2);bottom:calc(var(--vh)*1.2);font-size:calc(var(--vh)*1.5);font-size:max(calc(var(--vh)*1.5),10px);opacity:.4;z-index:2;}
 </style>
 <div class="wrap">
   <div class="bg"></div><div class="glow"></div>
   <div class="bars">${bars}</div>
-  <div class="head"><div class="art"></div><div><div class="title"></div><div class="artist"></div></div><div class="room"></div></div>
+  <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div></div>
   <div class="lyr"><div class="track"></div></div>
   <div class="msg"></div>
   <div class="src">Lyrics: LRCLIB</div>
@@ -203,7 +205,7 @@ class LyricsPartyCard extends HTMLElement {
     const e = this._el, w = e.wrap.clientWidth, h = e.wrap.clientHeight;
     if (!w || !h) return;
     e.wrap.style.setProperty('--vw', w / 100 + 'px');
-    e.wrap.style.setProperty('--vh', h / 100 + 'px');
+    e.wrap.style.setProperty('--vh', Math.min(w, h) / 100 + 'px');
     e.wrap.style.setProperty('--vmax', Math.max(w, h) / 100 + 'px');
     this._center();
   }
@@ -225,7 +227,7 @@ class LyricsPartyCard extends HTMLElement {
     e.wrap.classList.toggle('lite', c.visuals === 'lite');
     e.wrap.classList.toggle('off', c.visuals === 'off');
     e.wrap.classList.toggle('card', card);
-    e.wrap.style.height = card ? String(c.height) : '100vh';
+    e.wrap.style.height = card ? String(c.height) : '';
     e.wrap.style.setProperty('--fs', +c.font_scale || 1);
   }
 
