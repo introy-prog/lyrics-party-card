@@ -1,0 +1,48 @@
+blueprint:
+  name: Send lyrics to Fire TV
+  description: >-
+    Opens a Lyrics Party dashboard in Fully Kiosk Browser on a Fire TV over ADB.
+    Create one script per TV, then run it from a dashboard button. This is a
+    script, so it only runs when you start it.
+  domain: script
+  source_url: https://github.com/introy-prog/lyrics-party-card/blob/main/blueprints/script/lyrics-party/send_lyrics_to_fire_tv.yaml
+  input:
+    fire_tv:
+      name: Fire TV
+      description: The Fire TV, added through the Android Debug Bridge integration.
+      selector:
+        entity:
+          integration: androidtv
+          domain: media_player
+    dashboard_url:
+      name: Dashboard URL
+      description: >-
+        Full URL of the lyrics dashboard as the Fire TV reaches it, for example
+        http://192.168.1.10:8123/lyrics-party/0
+      selector:
+        text:
+          type: url
+    room:
+      name: Room (optional)
+      description: >-
+        Show this media player. Leave empty to follow whatever is playing.
+      default: ""
+      selector:
+        entity:
+          domain: media_player
+
+mode: single
+
+variables:
+  dashboard_url: !input dashboard_url
+  room: !input room
+  url: >-
+    {{ dashboard_url ~ ((('&' if '?' in dashboard_url else '?') ~ 'room=' ~ room) if room else '') }}
+
+sequence:
+  - action: androidtv.adb_command
+    target:
+      entity_id: !input fire_tv
+    data:
+      command: >-
+        am start -n de.ozerov.fully/.MainActivity -a android.intent.action.VIEW -d "{{ url }}"
