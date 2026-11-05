@@ -56,6 +56,8 @@ visuals: lite
 | `font_scale` | `1` | Lyrics size multiplier. |
 | `close_path` | `/lovelace` | Where the ✕ goes. Touch screens show it in the `fullscreen` layout. |
 
+On touch screens, a room picker in the header lets each phone or tablet choose a room or **Auto**, and that device remembers its choice.
+
 Add `?room=media_player.kitchen` to the dashboard URL to lock that screen to one room. Each screen runs on its own, so different rooms can show different songs at the same time. A locked screen shows a waiting message until music starts in that room.
 
 ## Send lyrics to a Fire TV

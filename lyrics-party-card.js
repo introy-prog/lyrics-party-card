@@ -18,6 +18,7 @@ const LP_API = 'https://lrclib.net/api/';
 const LP_MISS_TTL = 60 * 60 * 1000;   // retry songs with no lyrics after an hour
 const LP_RETRY_MS = 30 * 1000;
 const LP_MAX_RETRIES = 3;
+const LP_ROOM_KEY = 'lyrics-party-room';   // each device remembers its own room
 
 function lpClean(t) {
   return (t || '')
@@ -113,6 +114,7 @@ class LyricsPartyCard extends HTMLElement {
     const wasIdle = !this._st, idleChanged = ent !== prev;
     this._st = st;
     this._idle = raw;
+    this._renderPicker();
     if (!st) {
       clearTimeout(this._retry);
       if (this._key !== null || !wasIdle || idleChanged || !this._seen) { this._seen = true; this._key = null; this._renderMeta(); }
@@ -134,14 +136,41 @@ class LyricsPartyCard extends HTMLElement {
   _pickEntity() {
     const q = new URLSearchParams(window.location.search).get('room');
     const h = this._hass;
+    if (this._el) this._el.wrap.classList.toggle('locked', !!q);
     if (q && h.states[q]) return q;
+    if (this._picked && h.states[this._picked]) return this._picked;
     if (this._config.entity && !this._config.entities) return this._config.entity;
-    let pool = this._config.entities;
-    if (!pool) pool = Object.keys(h.states).filter(e => e.startsWith('media_player.') &&
-      ('media_title' in h.states[e].attributes || h.states[e].attributes.device_class === 'speaker'));
+    const pool = this._pool();
     const playing = pool.filter(e => h.states[e] && h.states[e].state === 'playing' && h.states[e].attributes.media_title);
     if (this._ent && playing.includes(this._ent)) return this._ent;
     return playing[0] || this._config.entity || pool.find(e => h.states[e] && h.states[e].attributes.media_title) || null;
+  }
+
+  _pool() {
+    const h = this._hass;
+    return this._config.entities || Object.keys(h.states).filter(e => e.startsWith('media_player.') &&
+      ('media_title' in h.states[e].attributes || h.states[e].attributes.device_class === 'speaker'));
+  }
+
+  // Touch-screen room picker. Auto shows the room it's following.
+  _renderPicker() {
+    const sel = this._el.pick, h = this._hass;
+    const rooms = this._pool().filter(e => h.states[e] && h.states[e].attributes.device_class !== 'tv')
+      .map(e => [e, this._roomName(h.states[e])]).sort((a, b) => a[1].localeCompare(b[1]));
+    const live = !this._picked && this._st ? this._roomName(this._st) : '';
+    const sig = JSON.stringify([rooms, live, this._picked]);
+    if (sig === this._pickSig) return;
+    this._pickSig = sig;
+    const opt = (v, t) => `<option value="${this._esc(v)}">${this._esc(t)}</option>`;
+    sel.innerHTML = opt('', live ? 'Auto · ' + live : 'Auto') + rooms.map(r => opt(r[0], r[1])).join('');
+    sel.value = this._picked && h.states[this._picked] ? this._picked : '';
+  }
+
+  _pickRoom(v) {
+    this._picked = v;
+    try { if (v) localStorage.setItem(LP_ROOM_KEY, v); else localStorage.removeItem(LP_ROOM_KEY); } catch (e) { /* storage unavailable */ }
+    this._ent = null;
+    if (this._hass) this.hass = this._hass;
   }
 
   _build() {
@@ -173,7 +202,9 @@ class LyricsPartyCard extends HTMLElement {
   .info{flex:1;min-width:0;}
   .close{display:none;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px;line-height:44px;text-align:center;cursor:pointer;}
   /* Full screen often runs in kiosk mode with no menu, so touch screens need a way out. Fire TV has no touch screen. */
-  @media (pointer:coarse){.wrap:not(.card) .close{display:block;}}
+  .pick{display:none;flex:none;max-width:112px;height:36px;padding:0 8px;border:0;border-radius:18px;background:rgba(255,255,255,.14);color:#fff;font-size:16px;font-family:inherit;}
+  .pick option{color:#000;}
+  @media (pointer:coarse){.wrap:not(.card) .close{display:block;}.wrap:not(.locked) .pick{display:block;}.wrap:not(.locked) .room{display:none;}}
   .art{width:calc(var(--vh)*13);height:calc(var(--vh)*13);border-radius:12px;background:#333 center/cover;box-shadow:0 6px 24px rgba(0,0,0,.5);flex:none;}
   .title{font-size:calc(var(--vh)*4.2);font-weight:700;line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
   .artist{font-size:calc(var(--vh)*3);opacity:.8;margin-top:calc(var(--vh)*.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -193,15 +224,17 @@ class LyricsPartyCard extends HTMLElement {
 <div class="wrap">
   <div class="bg"></div><div class="glow"></div>
   <div class="bars">${bars}</div>
-  <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div><button class="close" type="button" aria-label="Close lyrics">✕</button></div>
+  <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div><select class="pick" aria-label="Room"></select><button class="close" type="button" aria-label="Close lyrics">✕</button></div>
   <div class="lyr"><div class="track"></div></div>
   <div class="msg"></div>
   <div class="src">Lyrics: LRCLIB</div>
 </div>`;
     const $ = s => this._root.querySelector(s);
     this._el = { wrap: $('.wrap'), bg: $('.bg'), glow: $('.glow'), art: $('.art'), title: $('.title'),
-      artist: $('.artist'), room: $('.room'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
+      artist: $('.artist'), room: $('.room'), pick: $('.pick'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
     $('.close').addEventListener('click', () => this._close());
+    $('.pick').addEventListener('change', ev => this._pickRoom(ev.target.value));
+    try { this._picked = localStorage.getItem(LP_ROOM_KEY) || ''; } catch (e) { this._picked = ''; }
     this._applyColor();
     this._timer = setInterval(() => this._tick(), 250);
     this._observe();
