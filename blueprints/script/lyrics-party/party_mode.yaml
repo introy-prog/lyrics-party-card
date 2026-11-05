@@ -1,0 +1,85 @@
+blueprint:
+  name: Lyrics party mode
+  description: >-
+    Groups your speakers, turns on your Fire TVs, and opens the lyrics on every
+    TV. This is a script, so it only runs when you start it. Only the TVs you
+    choose here are turned on.
+  domain: script
+  source_url: https://github.com/introy-prog/lyrics-party-card/blob/main/blueprints/script/lyrics-party/party_mode.yaml
+  input:
+    speakers:
+      name: Speakers
+      description: >-
+        The speakers to group. The group forms around whichever one is playing,
+        or the first one if none are.
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    fire_tvs:
+      name: Fire TVs
+      description: The Fire TVs to turn on, added through the Android Debug Bridge integration.
+      selector:
+        entity:
+          integration: androidtv
+          domain: media_player
+          multiple: true
+    dashboard_url:
+      name: Dashboard URL
+      description: >-
+        Full URL of the lyrics dashboard as the Fire TVs reach it, for example
+        http://192.168.1.10:8123/lyrics-party/0
+      selector:
+        text:
+          type: url
+    wake_delay:
+      name: Wake delay
+      description: Seconds to wait after turning on a TV before opening the lyrics.
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 30
+          unit_of_measurement: seconds
+
+mode: single
+
+variables:
+  speakers: !input speakers
+  fire_tvs: !input fire_tvs
+  dashboard_url: !input dashboard_url
+  wake_delay: !input wake_delay
+  leader: >-
+    {{ (speakers | select('is_state', 'playing') | list + speakers)[0] }}
+  others: "{{ speakers | reject('eq', leader) | list }}"
+  url: >-
+    {{ dashboard_url ~ ('&' if '?' in dashboard_url else '?') ~ 'room=' ~ leader }}
+
+sequence:
+  - if: "{{ others | count > 0 }}"
+    then:
+      - action: media_player.join
+        continue_on_error: true
+        target:
+          entity_id: "{{ leader }}"
+        data:
+          group_members: "{{ others }}"
+  - repeat:
+      for_each: "{{ fire_tvs }}"
+      sequence:
+        - action: media_player.turn_on
+          continue_on_error: true
+          target:
+            entity_id: "{{ repeat.item }}"
+  - delay:
+      seconds: "{{ wake_delay }}"
+  - repeat:
+      for_each: "{{ fire_tvs }}"
+      sequence:
+        - action: androidtv.adb_command
+          continue_on_error: true
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            command: >-
+              am start -n de.ozerov.fully/.MainActivity -a android.intent.action.VIEW -d "{{ url }}"

@@ -25,7 +25,9 @@ blueprint:
     room:
       name: Room (optional)
       description: >-
-        Show this media player. Leave empty to follow whatever is playing.
+        Show this media player. Leave it empty to use the speaker in the same
+        Home Assistant area as the Fire TV, or to follow whatever is playing if
+        that area has no speaker.
       default: ""
       selector:
         entity:
@@ -34,8 +36,15 @@ blueprint:
 mode: single
 
 variables:
+  fire_tv: !input fire_tv
   dashboard_url: !input dashboard_url
-  room: !input room
+  chosen_room: !input room
+  tv_area: "{{ area_id(fire_tv) }}"
+  room: >-
+    {% if chosen_room %}{{ chosen_room }}{% elif tv_area %}{{
+    (area_entities(tv_area) | select('search', '^media_player\\.')
+    | select('is_state_attr', 'device_class', 'speaker') | list + [''])[0]
+    }}{% endif %}
   url: >-
     {{ dashboard_url ~ ((('&' if '?' in dashboard_url else '?') ~ 'room=' ~ room) if room else '') }}
 

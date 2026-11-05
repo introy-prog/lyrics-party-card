@@ -11,7 +11,7 @@ Time-synced lyrics for whatever your Home Assistant media player is playing, wit
 - Background colors taken from the album art
 - Light visuals built to run on a Fire TV Stick
 - Card layout for normal dashboards and full-screen layout for TVs
-- Optional script blueprint that sends the lyrics screen to a Fire TV
+- Optional blueprints that send lyrics to a Fire TV and start a whole-house party mode
 
 ## Install
 
@@ -55,7 +55,7 @@ visuals: lite
 | `visuals` | `full` | `full`, `lite`, or `off`. |
 | `font_scale` | `1` | Lyrics size multiplier. |
 
-Add `?room=media_player.kitchen` to the dashboard URL to pick a room for that screen.
+Add `?room=media_player.kitchen` to the dashboard URL to lock that screen to one room. Each screen runs on its own, so different rooms can show different songs at the same time. A locked screen shows a waiting message until music starts in that room.
 
 ## Send lyrics to a Fire TV
 
@@ -71,7 +71,17 @@ Before you use it, set up each Fire TV:
 4. Add the Fire TV to Home Assistant with the **Android Debug Bridge** integration.
 5. Make sure Fully Kiosk can open your dashboard without a login prompt.
 
-Then create a script from the blueprint for each TV.
+Then create a script from the blueprint for each TV. If the Fire TV and a speaker are in the same Home Assistant area, the blueprint pairs them automatically. If an area has more than one speaker, choose the room yourself.
+
+To open the dashboard without a login prompt, you can add the Fire TV's IP address to Home Assistant's [`trusted_networks`](https://www.home-assistant.io/docs/authentication/providers/#trusted-networks) auth provider. Only do this for devices you trust, and give that login a non-admin user.
+
+## Party mode
+
+[![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fintroy-prog%2Flyrics-party-card%2Fblob%2Fmain%2Fblueprints%2Fscript%2Flyrics-party%2Fparty_mode.yaml)
+
+Party mode groups the speakers you choose, turns on the Fire TVs you choose, and opens the lyrics on every one. It groups around whichever chosen speaker is playing, or the first one in the list. The music keeps playing, and it runs only when you start it. Leave out any TV you don't want turned on.
+
+The Fire TVs need the setup above. Grouping works with players that support it, such as Sonos.
 
 ## Limits
 

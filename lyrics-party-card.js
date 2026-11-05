@@ -107,9 +107,16 @@ class LyricsPartyCard extends HTMLElement {
     this._hass = hass;
     const prev = this._ent, ent = this._pickEntity();
     this._ent = ent;
-    const st = ent ? hass.states[ent] : null;
+    const raw = ent ? hass.states[ent] : null;
+    const st = raw && ['playing', 'paused', 'buffering'].includes(raw.state) && raw.attributes.media_title ? raw : null;
+    const wasIdle = !this._st, idleChanged = ent !== prev;
     this._st = st;
-    if (!st) { this._key = null; this._renderMeta(); return; }
+    this._idle = raw;
+    if (!st) {
+      clearTimeout(this._retry);
+      if (this._key !== null || !wasIdle || idleChanged || !this._seen) { this._seen = true; this._key = null; this._renderMeta(); }
+      return;
+    }
     const a = st.attributes;
     const key = [a.media_title, a.media_artist, Math.round(a.media_duration || 0)].join('|');
     if (key !== this._key) {
@@ -231,20 +238,28 @@ class LyricsPartyCard extends HTMLElement {
     e.wrap.style.setProperty('--fs', +c.font_scale || 1);
   }
 
+  // Sonos names often repeat, such as "Living Room Living Room"
+  _roomName(st) {
+    const fn = (st.attributes.friendly_name || '').trim(), w = fn.split(/\s+/), hlf = w.length / 2;
+    return w.length % 2 === 0 && w.slice(0, hlf).join(' ') === w.slice(hlf).join(' ') ? w.slice(0, hlf).join(' ') : fn;
+  }
+
   _renderMeta() {
     const e = this._el; if (!e) return;
     const st = this._st;
     if (!st) {
-      e.title.textContent = 'Nothing playing'; e.artist.textContent = ''; e.room.textContent = '';
-      e.art.style.backgroundImage = ''; e.track.innerHTML = ''; e.msg.textContent = 'Start some music to see lyrics';
+      const room = this._idle ? this._roomName(this._idle) : '';
+      e.title.textContent = room ? 'Nothing playing in ' + room : 'Nothing playing'; e.artist.textContent = ''; e.room.textContent = '';
+      e.art.style.backgroundImage = ''; e.track.innerHTML = ''; e.track.style.transform = 'translateY(0)';
+      e.lyr.classList.remove('plain'); e.wrap.classList.add('paused');
+      e.msg.textContent = 'Lyrics will appear when music starts';
       this._lines = null; this._plain = null; this._status = 'idle';
       return;
     }
     const a = st.attributes;
     e.title.textContent = a.media_title || '';
     e.artist.textContent = [a.media_artist, a.media_album_name].filter(Boolean).join(' · ');
-    const fn = (a.friendly_name || '').trim(), w = fn.split(/\s+/), hlf = w.length / 2;
-    e.room.textContent = (w.length % 2 === 0 && w.slice(0, hlf).join(' ') === w.slice(hlf).join(' ')) ? w.slice(0, hlf).join(' ') : fn;
+    e.room.textContent = this._roomName(st);
     e.art.style.backgroundImage = a.entity_picture ? `url("${String(a.entity_picture).replace(/"/g, '%22')}")` : '';
   }
 
