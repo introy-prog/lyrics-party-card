@@ -83,6 +83,10 @@ Party mode groups the speakers you choose, turns on the Fire TVs you choose, and
 
 The Fire TVs need the setup above. Grouping works with players that support it, such as Sonos.
 
+[![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fintroy-prog%2Flyrics-party-card%2Fblob%2Fmain%2Fblueprints%2Fscript%2Flyrics-party%2Fparty_off.yaml)
+
+The party off blueprint ungroups the same speakers and turns off the same Fire TVs. Music keeps playing on the speaker that led the group unless you turn on **Stop the music**.
+
 ## Limits
 
 - **Visuals follow the style of the music, not the sound.** Home Assistant can't hear the audio, so they don't react to it.

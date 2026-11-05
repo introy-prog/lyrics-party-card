@@ -1,0 +1,54 @@
+blueprint:
+  name: Lyrics party off
+  description: >-
+    Ungroups your speakers and turns off your Fire TVs. This is a script, so it
+    only runs when you start it.
+  domain: script
+  source_url: https://github.com/introy-prog/lyrics-party-card/blob/main/blueprints/script/lyrics-party/party_off.yaml
+  input:
+    speakers:
+      name: Speakers
+      description: The speakers to ungroup. Use the same list as party mode.
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    fire_tvs:
+      name: Fire TVs
+      description: The Fire TVs to turn off. Use the same list as party mode.
+      selector:
+        entity:
+          integration: androidtv
+          domain: media_player
+          multiple: true
+    stop_music:
+      name: Stop the music
+      description: >-
+        Pause the speakers first. If this is off, music keeps playing on the
+        speaker that led the group.
+      default: false
+      selector:
+        boolean:
+
+mode: single
+
+variables:
+  speakers: !input speakers
+  fire_tvs: !input fire_tvs
+  stop_music: !input stop_music
+
+sequence:
+  - if: "{{ stop_music }}"
+    then:
+      - action: media_player.media_pause
+        continue_on_error: true
+        target:
+          entity_id: "{{ speakers }}"
+  - action: media_player.unjoin
+    continue_on_error: true
+    target:
+      entity_id: "{{ speakers }}"
+  - action: media_player.turn_off
+    continue_on_error: true
+    target:
+      entity_id: "{{ fire_tvs }}"
