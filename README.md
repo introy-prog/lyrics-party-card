@@ -54,6 +54,7 @@ visuals: lite
 | `offset` | `0.3` | Seconds to shift the lyrics. Raise it if lyrics run late. |
 | `visuals` | `full` | `full`, `lite`, or `off`. |
 | `font_scale` | `1` | Lyrics size multiplier. |
+| `close_path` | `/lovelace` | Where the ✕ goes. Touch screens show it in the `fullscreen` layout. |
 
 Add `?room=media_player.kitchen` to the dashboard URL to lock that screen to one room. Each screen runs on its own, so different rooms can show different songs at the same time. A locked screen shows a waiting message until music starts in that room.
 

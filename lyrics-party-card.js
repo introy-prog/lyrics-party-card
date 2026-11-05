@@ -10,6 +10,7 @@
  * offset: 0.3                          # seconds; lyrics lead the audio slightly
  * visuals: full | lite | off
  * font_scale: 1
+ * close_path: /lovelace              # where the touch-screen X goes
  * URL override: ?room=media_player.kitchen
  */
 const LP_VERSION = '1.1.0';
@@ -168,8 +169,11 @@ class LyricsPartyCard extends HTMLElement {
   @keyframes bounce{0%{transform:scaleY(.08)}100%{transform:scaleY(1)}}
   .paused .bars i,.paused .glow{animation-play-state:paused;}
   .lite .glow{animation:none}.off .bars,.off .glow{display:none}
-  .head{position:relative;flex:none;margin:calc(var(--vh)*3) calc(var(--vw)*3) calc(var(--vh)*4);display:flex;align-items:center;gap:calc(var(--vh)*3);z-index:2;}
+  .head{position:relative;flex:none;margin:calc(var(--vh)*3 + env(safe-area-inset-top,0px)) calc(var(--vw)*3) calc(var(--vh)*4);display:flex;align-items:center;gap:calc(var(--vh)*3);z-index:2;}
   .info{flex:1;min-width:0;}
+  .close{display:none;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px;line-height:44px;text-align:center;cursor:pointer;}
+  /* Full screen often runs in kiosk mode with no menu, so touch screens need a way out. Fire TV has no touch screen. */
+  @media (pointer:coarse){.wrap:not(.card) .close{display:block;}}
   .art{width:calc(var(--vh)*13);height:calc(var(--vh)*13);border-radius:12px;background:#333 center/cover;box-shadow:0 6px 24px rgba(0,0,0,.5);flex:none;}
   .title{font-size:calc(var(--vh)*4.2);font-weight:700;line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
   .artist{font-size:calc(var(--vh)*3);opacity:.8;margin-top:calc(var(--vh)*.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -189,7 +193,7 @@ class LyricsPartyCard extends HTMLElement {
 <div class="wrap">
   <div class="bg"></div><div class="glow"></div>
   <div class="bars">${bars}</div>
-  <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div></div>
+  <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div><button class="close" type="button" aria-label="Close lyrics">✕</button></div>
   <div class="lyr"><div class="track"></div></div>
   <div class="msg"></div>
   <div class="src">Lyrics: LRCLIB</div>
@@ -197,9 +201,15 @@ class LyricsPartyCard extends HTMLElement {
     const $ = s => this._root.querySelector(s);
     this._el = { wrap: $('.wrap'), bg: $('.bg'), glow: $('.glow'), art: $('.art'), title: $('.title'),
       artist: $('.artist'), room: $('.room'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
+    $('.close').addEventListener('click', () => this._close());
     this._applyColor();
     this._timer = setInterval(() => this._tick(), 250);
     this._observe();
+  }
+
+  _close() {
+    history.pushState(null, '', this._config.close_path || '/lovelace');
+    window.dispatchEvent(new CustomEvent('location-changed', { bubbles: true, composed: true, detail: { replace: false } }));
   }
 
   _observe() {
