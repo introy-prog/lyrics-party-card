@@ -189,11 +189,11 @@ class LyricsPartyCard extends HTMLElement {
   .bg{position:absolute;inset:0;transition:background 1.5s ease;}
   /* Album art, drawn at 1/10 size and scaled up, so the blur stays cheap on a Fire Stick */
   .bgart{position:absolute;left:-5%;top:-5%;width:11%;height:11%;background:center/cover no-repeat;transform-origin:0 0;
-    transform:scale(10);filter:blur(2px) saturate(1.5);opacity:0;transition:opacity 1.2s ease;will-change:transform,opacity;}
+    transform:scale(10);filter:blur(2px) saturate(1.4) brightness(.55);opacity:0;transition:opacity 1.2s ease;will-change:transform,opacity;}
   .bgart.on{opacity:.9;}
   .wrap:not(.lite) .bgart{animation:drift 40s ease-in-out infinite alternate;}
   @keyframes drift{0%{transform:scale(10) translate(0,0)}100%{transform:scale(10.8) translate(-.4%,-.3%)}}
-  .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.15),rgba(0,0,0,.55));opacity:0;transition:opacity 1.2s ease;}
+  .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.2),rgba(0,0,0,.65));opacity:0;transition:opacity 1.2s ease;}
   .bgart.on~.shade{opacity:1;}
   .noart .bgart,.noart .shade{display:none;}
   .glow{position:absolute;width:calc(var(--vmax)*70);height:calc(var(--vmax)*70);left:50%;top:55%;transform:translate(-50%,-50%);
@@ -214,7 +214,7 @@ class LyricsPartyCard extends HTMLElement {
   /* Full screen often runs in kiosk mode with no menu, so touch screens need a way out. Fire TV has no touch screen. */
   .pick{display:none;flex:none;max-width:112px;height:36px;padding:0 8px;border:0;border-radius:18px;background:rgba(255,255,255,.14);color:#fff;font-size:16px;font-family:inherit;}
   .pick option{color:#000;}
-  @media (pointer:coarse){.wrap:not(.card) .close{display:block;}.wrap:not(.locked) .pick{display:block;}.wrap:not(.locked) .room{display:none;}}
+  @media (pointer:coarse){.wrap:not(.card):not(.tv) .close{display:block;}.wrap:not(.locked):not(.tv) .pick{display:block;}.wrap:not(.locked):not(.tv) .room{display:none;}}
   .art{width:calc(var(--vh)*13);height:calc(var(--vh)*13);border-radius:12px;background:#333 center/cover;box-shadow:0 6px 24px rgba(0,0,0,.5);flex:none;}
   .title{font-size:calc(var(--vh)*4.2);font-weight:700;line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
   .artist{font-size:calc(var(--vh)*3);opacity:.8;margin-top:calc(var(--vh)*.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -242,6 +242,8 @@ class LyricsPartyCard extends HTMLElement {
     const $ = s => this._root.querySelector(s);
     this._el = { wrap: $('.wrap'), bg: $('.bg'), bgart: $('.bgart'), glow: $('.glow'), art: $('.art'), title: $('.title'),
       artist: $('.artist'), room: $('.room'), pick: $('.pick'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
+    // Fire TV and other TVs report a touch-style pointer, but there's nothing to tap
+    this._el.wrap.classList.toggle('tv', /\bAFT\w*|SmartTV|Android TV|BRAVIA|Tizen|Web0S/i.test(navigator.userAgent));
     $('.close').addEventListener('click', () => this._close());
     $('.pick').addEventListener('change', ev => this._pickRoom(ev.target.value));
     try { this._picked = localStorage.getItem(LP_ROOM_KEY) || ''; } catch (e) { this._picked = ''; }
