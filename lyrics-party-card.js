@@ -10,6 +10,7 @@
  * offset: 0.3                          # seconds; lyrics lead the audio slightly
  * visuals: full | lite | off
  * font_scale: 1
+ * background: art | color             # blurred album art, or color only
  * close_path: /lovelace              # where the touch-screen X goes
  * URL override: ?room=media_player.kitchen
  */
@@ -91,7 +92,7 @@ class LyricsPartyCard extends HTMLElement {
   static getStubConfig() { return { layout: 'card', visuals: 'full', offset: 0.3 }; }
 
   setConfig(config) {
-    const c = Object.assign({ offset: 0.3, visuals: 'full', layout: 'fullscreen', height: '480px', font_scale: 1 }, config || {});
+    const c = Object.assign({ offset: 0.3, visuals: 'full', layout: 'fullscreen', height: '480px', font_scale: 1, background: 'art' }, config || {});
     if (!Array.isArray(c.entities) || !c.entities.length) delete c.entities;
     this._config = c;
     this._key = null;
@@ -186,6 +187,15 @@ class LyricsPartyCard extends HTMLElement {
     font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#111;}
   .wrap.card{border-radius:var(--ha-card-border-radius,12px);}
   .bg{position:absolute;inset:0;transition:background 1.5s ease;}
+  /* Album art, drawn at 1/10 size and scaled up, so the blur stays cheap on a Fire Stick */
+  .bgart{position:absolute;left:-5%;top:-5%;width:11%;height:11%;background:center/cover no-repeat;transform-origin:0 0;
+    transform:scale(10);filter:blur(3px) saturate(1.3);opacity:0;transition:opacity 1.2s ease;will-change:transform,opacity;}
+  .bgart.on{opacity:.55;}
+  .wrap:not(.lite) .bgart{animation:drift 40s ease-in-out infinite alternate;}
+  @keyframes drift{0%{transform:scale(10) translate(0,0)}100%{transform:scale(10.8) translate(-.4%,-.3%)}}
+  .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.25),rgba(0,0,0,.7));opacity:0;transition:opacity 1.2s ease;}
+  .bgart.on~.shade{opacity:1;}
+  .noart .bgart,.noart .shade{display:none;}
   .glow{position:absolute;width:calc(var(--vmax)*70);height:calc(var(--vmax)*70);left:50%;top:55%;transform:translate(-50%,-50%);
     border-radius:50%;opacity:.45;transition:background 1.5s ease;animation:breathe 6s ease-in-out infinite;}
   @keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(.9)}50%{transform:translate(-50%,-50%) scale(1.08)}}
@@ -222,7 +232,7 @@ class LyricsPartyCard extends HTMLElement {
   .src{position:absolute;right:calc(var(--vw)*2);bottom:calc(var(--vh)*1.2);font-size:calc(var(--vh)*1.5);font-size:max(calc(var(--vh)*1.5),10px);opacity:.4;z-index:2;}
 </style>
 <div class="wrap">
-  <div class="bg"></div><div class="glow"></div>
+  <div class="bg"></div><div class="bgart"></div><div class="shade"></div><div class="glow"></div>
   <div class="bars">${bars}</div>
   <div class="head"><div class="art"></div><div class="info"><div class="title"></div><div class="artist"></div></div><div class="room"></div><select class="pick" aria-label="Room"></select><button class="close" type="button" aria-label="Close lyrics">✕</button></div>
   <div class="lyr"><div class="track"></div></div>
@@ -230,7 +240,7 @@ class LyricsPartyCard extends HTMLElement {
   <div class="src">Lyrics: LRCLIB</div>
 </div>`;
     const $ = s => this._root.querySelector(s);
-    this._el = { wrap: $('.wrap'), bg: $('.bg'), glow: $('.glow'), art: $('.art'), title: $('.title'),
+    this._el = { wrap: $('.wrap'), bg: $('.bg'), bgart: $('.bgart'), glow: $('.glow'), art: $('.art'), title: $('.title'),
       artist: $('.artist'), room: $('.room'), pick: $('.pick'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
     $('.close').addEventListener('click', () => this._close());
     $('.pick').addEventListener('change', ev => this._pickRoom(ev.target.value));
@@ -277,6 +287,7 @@ class LyricsPartyCard extends HTMLElement {
     e.wrap.classList.toggle('lite', c.visuals === 'lite');
     e.wrap.classList.toggle('off', c.visuals === 'off');
     e.wrap.classList.toggle('card', card);
+    e.wrap.classList.toggle('noart', c.background === 'color');
     e.wrap.style.height = card ? String(c.height) : '';
     e.wrap.style.setProperty('--fs', +c.font_scale || 1);
   }
@@ -293,7 +304,7 @@ class LyricsPartyCard extends HTMLElement {
     if (!st) {
       const room = this._idle ? this._roomName(this._idle) : '';
       e.title.textContent = room ? 'Nothing playing in ' + room : 'Nothing playing'; e.artist.textContent = ''; e.room.textContent = '';
-      e.art.style.backgroundImage = ''; e.track.innerHTML = ''; e.track.style.transform = 'translateY(0)';
+      e.art.style.backgroundImage = ''; this._setBgArt(''); e.track.innerHTML = ''; e.track.style.transform = 'translateY(0)';
       e.lyr.classList.remove('plain'); e.wrap.classList.add('paused');
       e.msg.textContent = 'Lyrics will appear when music starts';
       this._lines = null; this._plain = null; this._status = 'idle';
@@ -304,6 +315,21 @@ class LyricsPartyCard extends HTMLElement {
     e.artist.textContent = [a.media_artist, a.media_album_name].filter(Boolean).join(' · ');
     e.room.textContent = this._roomName(st);
     e.art.style.backgroundImage = a.entity_picture ? `url("${String(a.entity_picture).replace(/"/g, '%22')}")` : '';
+    this._setBgArt(a.entity_picture);
+  }
+
+  // Fade the old cover out, swap it, then fade the new one in
+  _setBgArt(url) {
+    const b = this._el.bgart;
+    if (url === this._bgUrl) return;
+    this._bgUrl = url;
+    clearTimeout(this._bgT);
+    b.classList.remove('on');
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => { if (url !== this._bgUrl) return; this._bgT = setTimeout(() => {
+      b.style.backgroundImage = `url("${String(url).replace(/"/g, '%22')}")`; b.classList.add('on'); }, 400); };
+    img.src = url;
   }
 
   _cacheGet(k) {
@@ -447,6 +473,7 @@ const LP_LABELS = {
   layout: 'Layout',
   height: 'Card height (card layout only)',
   visuals: 'Visuals',
+  background: 'Background',
   offset: 'Lyrics offset',
   font_scale: 'Lyrics size'
 };
@@ -459,6 +486,8 @@ const LP_SCHEMA = [
   { name: 'height', selector: { text: {} } },
   { name: 'visuals', selector: { select: { mode: 'dropdown', options: [
     { value: 'full', label: 'Full' }, { value: 'lite', label: 'Lite (slower devices)' }, { value: 'off', label: 'Off' }] } } },
+  { name: 'background', selector: { select: { mode: 'dropdown', options: [
+    { value: 'art', label: 'Blurred album art' }, { value: 'color', label: 'Color only' }] } } },
   { name: 'offset', selector: { number: { min: -5, max: 5, step: 0.1, mode: 'box', unit_of_measurement: 's' } } },
   { name: 'font_scale', selector: { number: { min: 0.6, max: 2, step: 0.1, mode: 'slider' } } }
 ];
@@ -484,7 +513,7 @@ class LyricsPartyCardEditor extends HTMLElement {
       this.appendChild(this._form);
     }
     this._form.hass = this._hass;
-    this._form.data = Object.assign({ layout: 'fullscreen', visuals: 'full', offset: 0.3, font_scale: 1 }, this._config);
+    this._form.data = Object.assign({ layout: 'fullscreen', visuals: 'full', background: 'art', offset: 0.3, font_scale: 1 }, this._config);
   }
 }
 

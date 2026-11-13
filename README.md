@@ -8,7 +8,7 @@ Time-synced lyrics for whatever your Home Assistant media player is playing, wit
 
 - Synced lyrics that scroll with the song, with auto-scrolling plain lyrics as a fallback
 - Follows whichever room is playing, or stays on one player
-- Background colors taken from the album art
+- Blurred album art and colors from the cover behind the lyrics
 - Light visuals built to run on a Fire TV Stick
 - Card layout for normal dashboards and full-screen layout for TVs
 - Optional blueprints that send lyrics to a Fire TV and start a whole-house party mode
@@ -53,6 +53,7 @@ visuals: lite
 | `height` | `480px` | Card height. Applies to `layout: card`. |
 | `offset` | `0.3` | Seconds to shift the lyrics. Raise it if lyrics run late. |
 | `visuals` | `full` | `full`, `lite`, or `off`. |
+| `background` | `art` | `art` shows the album cover blurred behind the lyrics. `color` uses colors only. |
 | `font_scale` | `1` | Lyrics size multiplier. |
 | `close_path` | `/lovelace` | Where the ✕ goes. Touch screens show it in the `fullscreen` layout. |
 
