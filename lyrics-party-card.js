@@ -189,11 +189,11 @@ class LyricsPartyCard extends HTMLElement {
   .bg{position:absolute;inset:0;transition:background 1.5s ease;}
   /* Album art, drawn at 1/10 size and scaled up, so the blur stays cheap on a Fire Stick */
   .bgart{position:absolute;left:-5%;top:-5%;width:11%;height:11%;background:center/cover no-repeat;transform-origin:0 0;
-    transform:scale(10);filter:blur(3px) saturate(1.3);opacity:0;transition:opacity 1.2s ease;will-change:transform,opacity;}
-  .bgart.on{opacity:.55;}
+    transform:scale(10);filter:blur(2px) saturate(1.5);opacity:0;transition:opacity 1.2s ease;will-change:transform,opacity;}
+  .bgart.on{opacity:.9;}
   .wrap:not(.lite) .bgart{animation:drift 40s ease-in-out infinite alternate;}
   @keyframes drift{0%{transform:scale(10) translate(0,0)}100%{transform:scale(10.8) translate(-.4%,-.3%)}}
-  .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.25),rgba(0,0,0,.7));opacity:0;transition:opacity 1.2s ease;}
+  .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.15),rgba(0,0,0,.55));opacity:0;transition:opacity 1.2s ease;}
   .bgart.on~.shade{opacity:1;}
   .noart .bgart,.noart .shade{display:none;}
   .glow{position:absolute;width:calc(var(--vmax)*70);height:calc(var(--vmax)*70);left:50%;top:55%;transform:translate(-50%,-50%);
