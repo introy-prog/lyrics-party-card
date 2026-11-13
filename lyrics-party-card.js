@@ -115,6 +115,7 @@ class LyricsPartyCard extends HTMLElement {
     const wasIdle = !this._st, idleChanged = ent !== prev;
     this._st = st;
     this._idle = raw;
+    this._sampleClock(raw);
     this._renderPicker();
     if (!st) {
       clearTimeout(this._retry);
@@ -145,6 +146,19 @@ class LyricsPartyCard extends HTMLElement {
     const playing = pool.filter(e => h.states[e] && h.states[e].state === 'playing' && h.states[e].attributes.media_title);
     if (this._ent && playing.includes(this._ent)) return this._ent;
     return playing[0] || this._config.entity || pool.find(e => h.states[e] && h.states[e].attributes.media_title) || null;
+  }
+
+  // Screens' clocks drift from Home Assistant's. When a state change arrives, its
+  // timestamp is only a few milliseconds old, so the smallest gap seen is the skew.
+  _sampleClock(raw) {
+    if (raw && this._lastRaw && raw !== this._lastRaw && raw.last_updated) {
+      const d = Date.now() - new Date(raw.last_updated).getTime();
+      if (Math.abs(d) < 5000) {
+        this._skews = (this._skews || []).concat(d).slice(-10);
+        this._skew = Math.min.apply(null, this._skews);
+      }
+    }
+    this._lastRaw = raw;
   }
 
   _pool() {
@@ -243,7 +257,7 @@ class LyricsPartyCard extends HTMLElement {
     this._el = { wrap: $('.wrap'), bg: $('.bg'), bgart: $('.bgart'), glow: $('.glow'), art: $('.art'), title: $('.title'),
       artist: $('.artist'), room: $('.room'), pick: $('.pick'), lyr: $('.lyr'), track: $('.track'), msg: $('.msg') };
     // Fire TV and other TVs report a touch-style pointer, but there's nothing to tap
-    this._el.wrap.classList.toggle('tv', /\bAFT\w*|SmartTV|Android TV|BRAVIA|Tizen|Web0S/i.test(navigator.userAgent));
+    this._el.wrap.classList.toggle('tv', !navigator.maxTouchPoints || /\bAFT\w*|SmartTV|Android TV|BRAVIA|Tizen|Web0S/i.test(navigator.userAgent));
     $('.close').addEventListener('click', () => this._close());
     $('.pick').addEventListener('change', ev => this._pickRoom(ev.target.value));
     try { this._picked = localStorage.getItem(LP_ROOM_KEY) || ''; } catch (e) { this._picked = ''; }
@@ -396,8 +410,9 @@ class LyricsPartyCard extends HTMLElement {
     const st = this._st; if (!st) return 0;
     const a = st.attributes; let p = +a.media_position || 0;
     if (st.state === 'playing' && a.media_position_updated_at)
-      p += (Date.now() - new Date(a.media_position_updated_at).getTime()) / 1000;
-    return p + (+this._config.offset || 0);
+      p += (Date.now() - (this._skew || 0) - new Date(a.media_position_updated_at).getTime()) / 1000;
+    const q = parseFloat(new URLSearchParams(window.location.search).get('offset'));
+    return p + (isNaN(q) ? (+this._config.offset || 0) : q);
   }
 
   _center() {

@@ -59,6 +59,8 @@ visuals: lite
 
 On touch screens, a room picker in the header lets each phone or tablet choose a room or **Auto**, and that device remembers its choice.
 
+The card corrects for each screen's clock. If one screen still runs behind, add `?offset=1.5` (seconds) to its dashboard URL to shift just that screen.
+
 Add `?room=media_player.kitchen` to the dashboard URL to lock that screen to one room. Each screen runs on its own, so different rooms can show different songs at the same time. A locked screen shows a waiting message until music starts in that room.
 
 ## Send lyrics to a Fire TV
