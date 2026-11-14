@@ -51,6 +51,7 @@ visuals: lite
 | `entities` | none | List of players to follow. |
 | `layout` | `fullscreen` | `card` or `fullscreen`. Use `fullscreen` only in a Panel view. |
 | `height` | `480px` | Card height. Applies to `layout: card`. |
+| `bars` | `true` | Set to `false` to hide the music bars along the bottom. |
 | `offset` | `0.3` | Seconds to shift the lyrics. Raise it if lyrics run late. |
 | `visuals` | `full` | `full`, `lite`, or `off`. |
 | `background` | `art` | `art` shows the album cover blurred behind the lyrics. `color` uses colors only. |

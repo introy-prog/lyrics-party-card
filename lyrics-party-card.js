@@ -10,6 +10,7 @@
  * offset: 0.3                          # seconds; lyrics lead the audio slightly
  * visuals: full | lite | off
  * font_scale: 1
+ * bars: true                          # music bars along the bottom
  * background: art | color             # blurred album art, or color only
  * close_path: /lovelace              # where the touch-screen X goes
  * URL override: ?room=media_player.kitchen
@@ -92,7 +93,7 @@ class LyricsPartyCard extends HTMLElement {
   static getStubConfig() { return { layout: 'card', visuals: 'full', offset: 0.3 }; }
 
   setConfig(config) {
-    const c = Object.assign({ offset: 0.3, visuals: 'full', layout: 'fullscreen', height: '480px', font_scale: 1, background: 'art' }, config || {});
+    const c = Object.assign({ offset: 0.3, visuals: 'full', layout: 'fullscreen', height: '480px', font_scale: 1, background: 'art', bars: true }, config || {});
     if (!Array.isArray(c.entities) || !c.entities.length) delete c.entities;
     this._config = c;
     this._key = null;
@@ -210,6 +211,7 @@ class LyricsPartyCard extends HTMLElement {
   .shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.2),rgba(0,0,0,.65));opacity:0;transition:opacity 1.2s ease;}
   .bgart.on~.shade{opacity:1;}
   .noart .bgart,.noart .shade{display:none;}
+  .nobars .bars{display:none;}
   .glow{position:absolute;width:calc(var(--vmax)*70);height:calc(var(--vmax)*70);left:50%;top:55%;transform:translate(-50%,-50%);
     border-radius:50%;opacity:.45;transition:background 1.5s ease;animation:breathe 6s ease-in-out infinite;}
   @keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(.9)}50%{transform:translate(-50%,-50%) scale(1.08)}}
@@ -304,6 +306,7 @@ class LyricsPartyCard extends HTMLElement {
     e.wrap.classList.toggle('off', c.visuals === 'off');
     e.wrap.classList.toggle('card', card);
     e.wrap.classList.toggle('noart', c.background === 'color');
+    e.wrap.classList.toggle('nobars', c.bars === false);
     e.wrap.style.height = card ? String(c.height) : '';
     e.wrap.style.setProperty('--fs', +c.font_scale || 1);
   }
@@ -491,6 +494,7 @@ const LP_LABELS = {
   height: 'Card height (card layout only)',
   visuals: 'Visuals',
   background: 'Background',
+  bars: 'Music bars',
   offset: 'Lyrics offset',
   font_scale: 'Lyrics size'
 };
@@ -505,6 +509,7 @@ const LP_SCHEMA = [
     { value: 'full', label: 'Full' }, { value: 'lite', label: 'Lite (slower devices)' }, { value: 'off', label: 'Off' }] } } },
   { name: 'background', selector: { select: { mode: 'dropdown', options: [
     { value: 'art', label: 'Blurred album art' }, { value: 'color', label: 'Color only' }] } } },
+  { name: 'bars', selector: { boolean: {} } },
   { name: 'offset', selector: { number: { min: -5, max: 5, step: 0.1, mode: 'box', unit_of_measurement: 's' } } },
   { name: 'font_scale', selector: { number: { min: 0.6, max: 2, step: 0.1, mode: 'slider' } } }
 ];
@@ -530,7 +535,7 @@ class LyricsPartyCardEditor extends HTMLElement {
       this.appendChild(this._form);
     }
     this._form.hass = this._hass;
-    this._form.data = Object.assign({ layout: 'fullscreen', visuals: 'full', background: 'art', offset: 0.3, font_scale: 1 }, this._config);
+    this._form.data = Object.assign({ layout: 'fullscreen', visuals: 'full', background: 'art', bars: true, offset: 0.3, font_scale: 1 }, this._config);
   }
 }
 
